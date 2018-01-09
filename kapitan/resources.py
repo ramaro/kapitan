@@ -23,9 +23,10 @@ import logging
 import os
 import reclass
 import reclass.core
-import yaml
+from StringIO import StringIO
+from ruamel import yaml
 
-from kapitan.utils import render_jinja2_file, memoize
+from kapitan.utils import render_jinja2_file, memoize, YAMLPretty
 from kapitan import __file__ as kapitan_install_path
 
 logger = logging.getLogger(__name__)
@@ -50,7 +51,9 @@ def resource_callbacks(search_path):
 def yaml_dump(obj):
     "Dumps jsonnet obj as yaml"
     _obj = json.loads(obj)
-    return yaml.safe_dump(_obj, default_flow_style=False)
+    out = StringIO()
+    YAMLPretty().dump(_obj, stream=out)
+    return out.getvalue()
 
 def jinja2_render_file(search_path, name, ctx):
     """

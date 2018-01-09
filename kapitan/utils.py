@@ -23,7 +23,7 @@ import stat
 import jinja2
 import _jsonnet as jsonnet
 import collections
-import yaml
+from ruamel import yaml
 
 
 logger = logging.getLogger(__name__)
@@ -114,15 +114,15 @@ def memoize(obj):
     return memoizer
 
 
-class PrettyDumper(yaml.SafeDumper):
+class YAMLPretty(yaml.YAML):
     '''
     Increases indent of nested lists.
-    By default, they are indendented at the same level as the key on the previous line
-    More info on https://stackoverflow.com/questions/25108581/python-yaml-dump-bad-indentation
     '''
-    def increase_indent(self, flow=False, indentless=False):
-        return super(PrettyDumper, self).increase_indent(flow, False)
-
+    def __init__(self, **kwargs):
+        super(YAMLPretty, self).__init__(**kwargs)
+        # self.indent(mapping=2, sequence=4, offset=2)
+        self.preserve_quotes = True
+        self.default_flow_style = False
 
 def flatten_dict(d, parent_key='', sep='.'):
     '''

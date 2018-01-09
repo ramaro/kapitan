@@ -25,7 +25,9 @@ import os
 import re
 import sys
 import gnupg
-import yaml
+from ruamel import yaml
+
+from kapitan.utils import YAMLPretty
 
 logger = logging.getLogger(__name__)
 
@@ -140,7 +142,7 @@ def secret_gpg_write(gpg_obj, secrets_path, token, data, recipients, **kwargs):
             fingerprints = [gpg_fingerprint(gpg_obj, r) for r in recipients]
             secret_obj = {"data": b64data,
                           "recipients": [{'fingerprint': f} for f in fingerprints]}
-            yaml.safe_dump(secret_obj, stream=fp, default_flow_style=False)
+            YAMLPretty().dump(secret_obj, fp)
             logger.info("Wrote secret %s for fingerprints %s at %s", token,
                         ','.join([f[:8] for f in fingerprints]), full_secret_path)
         else:

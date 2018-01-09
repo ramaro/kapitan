@@ -24,10 +24,10 @@ import json
 import re
 import shutil
 import jsonschema
-import yaml
+from ruamel import yaml
 
 from kapitan.resources import search_imports, resource_callbacks, inventory
-from kapitan.utils import jsonnet_file, jsonnet_prune, render_jinja2_dir, PrettyDumper
+from kapitan.utils import jsonnet_file, jsonnet_prune, render_jinja2_dir, YAMLPretty
 from kapitan.secrets import secret_gpg_raw_read, secret_token_from_tag, secret_token_attributes
 from kapitan.secrets import SECRET_TOKEN_TAG_PATTERN, secret_gpg_read
 
@@ -121,6 +121,8 @@ def compile_jsonnet(file_path, output_path, search_path, ext_vars, **kwargs):
     secrets_reveal = kwargs.get('secrets_reveal', False)
     gpg_obj = kwargs.get('gpg_obj', None)
 
+    yaml_obj = YAMLPretty(typ="safe")
+
     if prune:
         json_output = jsonnet_prune(json_output)
         logger.debug("Pruned output")
@@ -136,7 +138,7 @@ def compile_jsonnet(file_path, output_path, search_path, ext_vars, **kwargs):
             file_path = os.path.join(output_path, '%s.%s' % (item_key, "yml"))
             with CompiledFile(file_path, mode="w", secrets_path=secrets_path,
                               secrets_reveal=secrets_reveal, gpg_obj=gpg_obj) as fp:
-                yaml.dump(item_value, stream=fp, Dumper=PrettyDumper, default_flow_style=False)
+                yaml_obj.dump(item_value, stream=fp)
                 logger.info("Wrote %s", file_path)
         else:
             raise ValueError('output is neither "json" or "yaml"')

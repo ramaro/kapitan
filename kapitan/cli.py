@@ -23,9 +23,9 @@ import os
 import sys
 from functools import partial
 import multiprocessing
-import yaml
+from ruamel import yaml
 
-from kapitan.utils import jsonnet_file, PrettyDumper, flatten_dict, searchvar
+from kapitan.utils import jsonnet_file, YAMLPretty, flatten_dict, searchvar
 from kapitan.targets import compile_target_file
 from kapitan.resources import search_imports, resource_callbacks, inventory_reclass
 from kapitan.version import PROJECT_NAME, DESCRIPTION, VERSION
@@ -133,7 +133,7 @@ def main():
                                    ext_vars=ext_vars)
         if args.output == 'yaml':
             json_obj = json.loads(json_output)
-            yaml_output = yaml.safe_dump(json_obj, default_flow_style=False)
+            yaml_output = yaml.safe_dump(json_obj)
             print yaml_output
         elif json_output:
             print json_output
@@ -170,9 +170,11 @@ def main():
             inv = inv['nodes'][args.target_name]
         if args.flat:
             inv = flatten_dict(inv)
-            print yaml.dump(inv, width=10000)
+            yamlobj = YAMLPretty()
+            yamlobj.width = 10000
+            yamlobj.dump(inv, sys.stdout)
         else:
-            print yaml.dump(inv, Dumper=PrettyDumper, default_flow_style=False)
+            YAMLPretty().dump(inv, sys.stdout)
     elif cmd == 'searchvar':
         searchvar(args.searchvar, args.inventory_path)
     elif cmd == 'secrets':
