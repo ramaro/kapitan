@@ -122,15 +122,16 @@ def gpg_fingerprint(gpg_obj, recipient):
     try:
         keys = gpg_obj.list_keys(keys=(recipient,))
         for key in keys:
+            expires = key.get('expires', '')
             # if 'expires' key is set and time in the future, return
-            if key['expires'] and (time.time() < int(key['expires'])):
+            if expires and (time.time() < int(key['expires'])):
                 return key['fingerprint']
             # if 'expires' key not set, return
-            elif not key['expires']:
+            elif not expires:
                 return key['fingerprint']
             else:
                 logger.info("Key for recipient: %s with fingerprint: %s is expired, skipping",
-                             recipient, key['fingerprint'])
+                            recipient, key['fingerprint'])
         raise GPGError("Could not find valid key for recipient: %s" % recipient)
     except IndexError as iexp:
         raise iexp
