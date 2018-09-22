@@ -95,8 +95,7 @@ def jinja2_render_file(search_paths, name, ctx):
             try:
                 return render_jinja2_file(_full_path, ctx)
             except Exception as e:
-                logger.error("Jsonnet jinja2 failed to render %s: %s", _full_path, str(e))
-                raise CompileError(e)
+                raise CompileError("Jsonnet jinja2 failed to render {}: {}".format(_full_path, e))
 
     raise IOError("jinja2 failed to render, could not find file: {}".format(_full_path))
 
@@ -177,8 +176,7 @@ def inventory(search_paths, target, inventory_path="inventory/"):
             break
 
     if not inv_path_exists:
-        logger.error("Inventory not found in search paths: %s", search_paths)
-        raise InventoryError()
+        raise InventoryError("Inventory not found in search paths: {}".format(search_paths))
 
     if target is None:
         return inventory_reclass(full_inv_path)["nodes"]
@@ -199,7 +197,8 @@ def inventory_reclass(inventory_path):
         reclass_config = {'storage_type': 'yaml_fs',
                           'inventory_base_uri': inventory_path,
                           'nodes_uri': os.path.join(inventory_path, 'targets'),
-                          'classes_uri': os.path.join(inventory_path, 'classes')
+                          'classes_uri': os.path.join(inventory_path, 'classes'),
+                          'compose_node_name': False
                          }
 
         try:
@@ -219,8 +218,10 @@ def inventory_reclass(inventory_path):
                 logger.debug("Using reclass inventory config defaults")
 
         try:
-            storage = reclass.get_storage(reclass_config['storage_type'], reclass_config['nodes_uri'],
-                                          reclass_config['classes_uri'])
+            storage = reclass.get_storage(reclass_config['storage_type'],
+                                          reclass_config['nodes_uri'],
+                                          reclass_config['classes_uri'],
+                                          reclass_config['compose_node_name'])
             class_mappings = reclass_config.get('class_mappings')  # this defaults to None (disabled)
             _reclass = reclass.core.Core(storage, class_mappings, reclass.settings.Settings())
 
