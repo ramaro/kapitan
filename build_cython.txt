@@ -1,0 +1,4 @@
+mv run.py run.pyx
+cython run.pyx --embed
+python3.6m-config --ldflags
+gcc -I/Users/ramaro/.pyenv/versions/3.6.4/include/python3.6m/ run.c -lpython3.6m -lpthread -lm -lutil -L/Users/ramaro/.pyenv/versions/3.6.4/Python.framework/Versions/3.6/lib/python3.6/config-3.6m-darwin -lpython3.6m -ldl -framework CoreFoundation
