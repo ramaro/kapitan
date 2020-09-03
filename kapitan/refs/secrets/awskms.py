@@ -20,7 +20,10 @@ class AWSKMSError(KapitanError):
     pass
 
 
-def awskms_obj():
+def awskms_obj(**kwargs):
+    if not kwargs.get("cache_session", True):
+        logger.debug("Disabled session cache for %s", __name__)
+        return boto3.session.Session().client("kms")
     if not cached.awskms_obj:
         cached.awskms_obj = boto3.session.Session().client("kms")
     return cached.awskms_obj
@@ -33,6 +36,7 @@ class AWSKMSSecret(Base64Ref):
         set encode_base64 to True to base64 encode data before encrypting and writing
         set encrypt to False if loading data that is already encrypted and base64
         """
+        self.cache_session = kwargs.get("cache_session", True)
         if encrypt:
             self._encrypt(data, key, encode_base64)
             if encode_base64:
@@ -76,6 +80,9 @@ class AWSKMSSecret(Base64Ref):
         ref_data = base64.b64decode(self.data)
         return self._decrypt(ref_data)
 
+    def awskms_obj(self):
+        return awskms_obj(cache_session=self.cache_session)
+
     def update_key(self, key):
         """
         re-encrypts data with new key, respects original encoding
@@ -113,7 +120,7 @@ class AWSKMSSecret(Base64Ref):
             if key == "mock":
                 ciphertext = base64.b64encode("mock".encode())
             else:
-                response = awskms_obj().encrypt(KeyId=key, Plaintext=_data)
+                response = self.awskms_obj().encrypt(KeyId=key, Plaintext=_data)
                 ciphertext = base64.b64encode(response["CiphertextBlob"])
             self.data = ciphertext
             self.key = key
@@ -129,7 +136,7 @@ class AWSKMSSecret(Base64Ref):
             if self.key == "mock":
                 plaintext = "mock".encode()
             else:
-                response = awskms_obj().decrypt(CiphertextBlob=base64.b64decode(data))
+                response = self.awskms_obj().decrypt(CiphertextBlob=base64.b64decode(data))
                 plaintext = response["Plaintext"]
 
             return plaintext.decode()

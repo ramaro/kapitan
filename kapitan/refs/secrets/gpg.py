@@ -34,6 +34,11 @@ class GPGError(Exception):
 
 
 def gpg_obj(*args, **kwargs):
+    if not kwargs.get("cache_session", True):
+        # allow disabling gpg_obj cache from GPGSecret
+        kwargs.pop("cache_session")
+        logger.debug("Disabled session cache for %s", __name__)
+        return gnupg.GPG(*args, **kwargs)
     if not cached.gpg_obj:
         cached.gpg_obj = gnupg.GPG(*args, **kwargs)
     return cached.gpg_obj
@@ -48,6 +53,7 @@ class GPGSecret(Base64Ref):
         if fingerprint key is not set in recipients, the first non-expired fingerprint will be used
         if fingerprint is set, there will be no name based lookup
         """
+        self.cache_session = kwargs.get("cache_session", True)
         fingerprints = lookup_fingerprints(recipients)
         if encrypt:
             self._encrypt(data, fingerprints, encode_base64)
@@ -103,6 +109,9 @@ class GPGSecret(Base64Ref):
         ref_data = base64.b64decode(self.data)
         return self._decrypt(ref_data)
 
+    def gpg_obj(self):
+        return gpg_obj(cache_session=self.cache_session)
+
     def update_recipients(self, recipients):
         """
         re-encrypts data with new recipients, respects original encoding
@@ -131,7 +140,7 @@ class GPGSecret(Base64Ref):
         if encode_base64:
             _data = base64.b64encode(data.encode())
             self.encoding = "base64"
-        enc = gpg_obj().encrypt(_data, fingerprints, sign=True, armor=False, **GPG_KWARGS)
+        enc = self.gpg_obj().encrypt(_data, fingerprints, sign=True, armor=False, **GPG_KWARGS)
         if enc.ok:
             self.data = enc.data
             self.recipients = [{"fingerprint": f} for f in fingerprints]
@@ -140,7 +149,7 @@ class GPGSecret(Base64Ref):
 
     def _decrypt(self, data):
         """decrypt data"""
-        dec = gpg_obj().decrypt(data, **GPG_KWARGS)
+        dec = self.gpg_obj().decrypt(data, **GPG_KWARGS)
         if dec.ok:
             return dec.data.decode()
         else:

@@ -27,12 +27,18 @@ class GoogleKMSError(KapitanError):
     pass
 
 
-def gkms_obj():
+def gkms_obj(**kwargs):
     if not cached.gkms_obj:
         # If --verbose is set, show requests from googleapiclient (which are actually logging.INFO)
         if logger.getEffectiveLevel() > logging.DEBUG:
             logging.getLogger("googleapiclient.discovery").setLevel(logging.ERROR)
         kms_client = gcloud.build("cloudkms", "v1", cache_discovery=False)
+
+        # allow disabling gpg_obj cache from GoogleKMSSecret
+        if not kwargs.get("cache_session", True):
+            logger.debug("Disabled session cache for %s", __name__)
+            return kms_client.projects().locations().keyRings().cryptoKeys()
+
         cached.gkms_obj = kms_client.projects().locations().keyRings().cryptoKeys()
     return cached.gkms_obj
 
@@ -44,6 +50,7 @@ class GoogleKMSSecret(Base64Ref):
         set encode_base64 to True to base64 encode data before encrypting and writing
         set encrypt to False if loading data that is already encrypted and base64
         """
+        self.cache_session = kwargs.get("cache_session", True)
         if encrypt:
             self._encrypt(data, key, encode_base64)
             if encode_base64:
@@ -87,6 +94,9 @@ class GoogleKMSSecret(Base64Ref):
         ref_data = base64.b64decode(self.data)
         return self._decrypt(ref_data)
 
+    def gkms_obj(self):
+        return gkms_obj(cache_session=self.cache_session)
+
     def update_key(self, key):
         """
         re-encrypts data with new key, respects original encoding
@@ -124,7 +134,7 @@ class GoogleKMSSecret(Base64Ref):
             if key == "mock":
                 ciphertext = base64.b64encode("mock".encode())
             else:
-                request = gkms_obj().encrypt(
+                request = self.gkms_obj().encrypt(
                     name=key, body={"plaintext": base64.b64encode(_data).decode("ascii")}
                 )
                 response = request.execute()
@@ -144,7 +154,7 @@ class GoogleKMSSecret(Base64Ref):
             if self.key == "mock":
                 plaintext = "mock".encode()
             else:
-                request = gkms_obj().decrypt(
+                request = self.gkms_obj().decrypt(
                     name=self.key, body={"ciphertext": base64.b64encode(data).decode("ascii")}
                 )
                 response = request.execute()

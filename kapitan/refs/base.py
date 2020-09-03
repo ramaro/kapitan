@@ -409,6 +409,7 @@ class RefController(object):
         self.backends = {}
         self.path = path
         self.embed_refs = kwargs.get("embed_refs", False)
+        self.cache_session = kwargs.get("cache_session", False)
 
     def register_backend(self, backend):
         "register backend type"
@@ -420,7 +421,8 @@ class RefController(object):
         try:
             return self.backends[type_name]
         except KeyError:
-            ref_kwargs = {"embed_refs": self.embed_refs}
+            ref_kwargs = {"embed_refs": self.embed_refs,
+                          "cache_session": self.cache_session }
             if type_name == "plain":
                 from kapitan.refs.base import PlainRefBackend
 
