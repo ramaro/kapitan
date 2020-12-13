@@ -20,9 +20,20 @@ from kapitan.resources import inventory as inventory_func
 from kapitan.utils import prune_empty
 
 logger = logging.getLogger(__name__)
-inventory = None
-inventory_global = None
-search_paths = None
+#inventory = None
+#inventory_global = None
+#search_paths = None
+
+from contextvars import ContextVar
+_inventory = ContextVar('inventory')
+_inventory_global = ContextVar('inventory_global')
+_search_paths = ContextVar('search_paths')
+
+def inventory():
+    return _inventory.get('inventory')
+
+def inventory_global():
+    return _inventory_global.get('inventory_global')
 
 
 def module_from_path(path, check_name=None):
@@ -55,7 +66,7 @@ def load_from_search_paths(module_name):
     loads and executes python module with module_name from search paths
     returns module
     """
-    for path in search_paths:
+    for path in _search_paths():
         try:
             _path = os.path.join(path, module_name)
             mod, spec = module_from_path(_path, check_name=module_name)
@@ -101,12 +112,15 @@ class Kadet(InputType):
 
         # These will be updated per target
         # XXX At the moment we have no other way of setting externals for modules...
-        global search_paths
-        search_paths = self.search_paths
-        global inventory
-        inventory = lambda: Dict(inventory_func(self.search_paths, target_name, inventory_path))  # noqa E731
-        global inventory_global
-        inventory_global = lambda: Dict(inventory_func(self.search_paths, None, inventory_path))  # noqa E731
+        #global search_paths
+        # search_paths = self.search_paths
+        _search_paths.set(self.search_paths)
+        # global inventory
+        # inventory = lambda: Dict(inventory_func(self.search_paths, target_name, inventory_path))  # noqa E731
+        _inventory.set(Dict(inventory_func(self.search_paths, target_name, inventory_path)))  # noqa E731
+        # global inventory_global
+        # inventory_global = lambda: Dict(inventory_func(self.search_paths, None, inventory_path))  # noqa E731
+        _inventory_global.set(Dict(inventory_func(self.search_paths, None, inventory_path)))  # noqa E731
 
         kadet_module, spec = module_from_path(file_path)
         sys.modules[spec.name] = kadet_module
